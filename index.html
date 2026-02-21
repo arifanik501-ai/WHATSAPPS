@@ -8,6 +8,9 @@
     <title>WhatsApp Clone</title>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 
@@ -63,6 +66,18 @@
             <path
                 d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z" />
         </symbol>
+        <symbol id="icon-search" viewBox="0 0 24 24">
+            <path
+                d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
+        </symbol>
+        <symbol id="icon-moon" viewBox="0 0 24 24">
+            <path
+                d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 0 1-4.4 2.26 5.403 5.403 0 0 1-3.14-9.8c-.44-.06-.9-.1-1.36-.1z" />
+        </symbol>
+        <symbol id="icon-sun" viewBox="0 0 24 24">
+            <path
+                d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58a.996.996 0 0 0-1.41 0 .996.996 0 0 0 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37a.996.996 0 0 0-1.41 0 .996.996 0 0 0 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0a.996.996 0 0 0 0-1.41l-1.06-1.06zm1.06-10.96a.996.996 0 0 0 0-1.41 .996.996 0 0 0-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06zM7.05 18.36a.996.996 0 0 0 0-1.41 .996.996 0 0 0-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06z" />
+        </symbol>
         <symbol id="tick-single" viewBox="0 0 16 11">
             <path d="M14.5 1.5l-8 8-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                 stroke-linejoin="round" />
@@ -73,17 +88,40 @@
         </symbol>
     </svg>
 
+
     <div id="app">
+        <!-- Theme Picker Overlay -->
+        <div id="theme-picker-overlay" class="theme-picker-overlay" onclick="closeThemePicker(event)">
+            <div class="theme-picker-panel" onclick="event.stopPropagation()">
+                <div class="theme-picker-header">
+                    <h3>Choose Theme</h3>
+                    <div class="theme-close-btn" onclick="closeThemePicker()">✕</div>
+                </div>
+                <div class="theme-grid" id="theme-grid">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+        </div>
+
         <!-- Landing Page -->
         <div id="landing-page">
             <div class="landing-glass-card">
+                <div class="theme-toggle" onclick="openThemePicker()"
+                    style="position: absolute; top: 15px; left: 15px; cursor: pointer; color: white; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: rgba(0,0,0,0.2); transition: background 0.3s;">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                        <path
+                            d="M12 22C6.49 22 2 17.51 2 12S6.49 2 12 2s10 4.04 10 9c0 3.31-2.69 6-6 6h-1.77c-.28 0-.5.22-.5.5 0 .12.05.23.13.33.41.47.64 1.06.64 1.67A2.5 2.5 0 0 1 12 22zm0-18c-4.41 0-8 3.59-8 8s3.59 8 8 8c.28 0 .5-.22.5-.5a.54.54 0 0 0-.14-.35c-.41-.46-.63-1.05-.63-1.65a2.5 2.5 0 0 1 2.5-2.5H16c2.21 0 4-1.79 4-4 0-3.86-3.59-7-8-7zm-5.5 9a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zm3-4a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zm5 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zm3 4a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z" />
+                    </svg>
+                </div>
                 <div class="wa-logo-container">
                     <svg viewBox="0 0 24 24">
                         <path
                             d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 00-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
                     </svg>
                 </div>
-                <div class="landing-title">Select User</div>
+                <h2>WhatsApp Web</h2>
+                <p class="subtitle">Select a user to start chatting.</p>
+                <div class="landing-title">Select Participants</div>
                 <button class="premium-btn user1-btn" onclick="handleUserSelection(event, 'user1')">
                     <div class="btn-content">
                         <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
@@ -100,7 +138,8 @@
                         <span>Nafija (User 2)</span>
                     </div>
                 </button>
-                <div class="landing-note">Select one on this device, the other on a second device</div>
+                <p class="helper-text">Choose one user for this device and another user on a separate device to start a
+                    conversation.</p>
             </div>
         </div>
 
@@ -112,7 +151,24 @@
                         <use href="#icon-person" />
                     </svg>
                 </div>
-                <div class="popup-text">Connecting as <span id="popup-user-name">User</span>...</div>
+                <div class="popup-text">Establishing secure connection as <span id="popup-user-name">User</span>...
+                </div>
+            </div>
+        </div>
+
+        <!-- Password Prompt Modal -->
+        <div id="password-modal" class="popup-overlay" style="display: none;">
+            <div class="password-card">
+                <div class="password-title">Enter Password to Continue</div>
+                <div class="password-input-wrapper">
+                    <input type="password" id="anik-password" placeholder="Password"
+                        onkeydown="if(event.key === 'Enter') verifyPassword()">
+                    <button class="icon-btn" onclick="togglePasswordVisibility()"><svg id="eye-icon">
+                            <use href="#icon-videocam" />
+                        </svg></button>
+                </div>
+                <div class="password-error" id="password-error">Incorrect password</div>
+                <button class="submit-btn" onclick="verifyPassword()">Submit</button>
             </div>
         </div>
 
@@ -129,7 +185,15 @@
                         </svg></div>
                     <div class="user-info">
                         <span class="user-name" id="chat-partner-name">...</span>
-                        <span class="user-status" id="chat-partner-status">Waiting...</span>
+                        <div class="status-container">
+                            <span class="user-status" id="chat-partner-status">Waiting...</span>
+                            <div class="header-typing-indicator" id="header-typing" style="display: none;">
+                                <span>Typing</span>
+                                <div class="header-dot"></div>
+                                <div class="header-dot"></div>
+                                <div class="header-dot"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="header-right">
@@ -145,16 +209,49 @@
                 </div>
                 <!-- 3-dots Dropdown -->
                 <div class="dropdown" id="main-menu">
-                    <div class="dropdown-item" onclick="promptClearChat()">Clear chat</div>
+                    <div class="dropdown-item" onclick="toggleTheme()">Dark Mode / Light Mode</div>
+                    <div class="dropdown-item" onclick="toggleSearchInput()">Search</div>
+                    <div class="dropdown-item" onclick="promptClearChat()">Clear Chat History</div>
                     <div class="dropdown-item" onclick="promptWallpaper()">Wallpaper</div>
                     <div class="dropdown-item" onclick="showLanding()">Change User</div>
                 </div>
             </header>
 
+            <!-- Search Banner -->
+            <div id="search-banner" class="search-banner" style="display:none;">
+                <div class="search-input-wrapper">
+                    <svg class="search-icon">
+                        <use href="#icon-search" />
+                    </svg>
+                    <input type="text" id="chat-search-input" placeholder="Search messages..."
+                        oninput="handleSearch(event)">
+                    <div class="search-close" onclick="toggleSearchInput()"><svg>
+                            <use href="#icon-close" />
+                        </svg></div>
+                </div>
+            </div>
+
+            <!-- Pinned Message Banner -->
+            <div id="pinned-banner" class="pinned-banner" style="display:none;">
+                <div class="pinned-content" onclick="scrollToPinned()">
+                    <div class="pinned-title">Pinned Message</div>
+                    <div class="pinned-text" id="pinned-text">...</div>
+                </div>
+                <div class="pinned-close" onclick="unpinMessage(event)"><svg>
+                        <use href="#icon-close" />
+                    </svg></div>
+            </div>
+
             <div id="chat-body" onscroll="handleScroll()">
                 <div class="encryption-banner">
-                    🔒 Messages are end-to-end encrypted. No one outside of this chat can read or listen to them.
+                    🔒 Messages are protected with end-to-end encryption. Only participants in this chat can read them.
                 </div>
+
+                <div id="empty-chat-state" class="empty-state" style="display: none;">
+                    <p>No messages yet.</p>
+                    <small>Start the conversation by sending your first message.</small>
+                </div>
+
                 <!-- Messages go here dynamically -->
 
                 <div class="typing-bubble" id="typing-indicator">
@@ -164,21 +261,40 @@
                 </div>
             </div>
 
-            <div id="scroll-bottom" onclick="scrollToBottom()">
+            <!-- Scroll to Bottom Button -->
+            <div class="scroll-to-bottom" id="scroll-bottom" onclick="scrollToBottom(true)">
                 <svg>
-                    <use href="#icon-down" />
+                    <use href="#icon-more" />
                 </svg>
                 <div class="unread-count" id="unread-badge">0</div>
             </div>
 
-            <!-- Context Menu (hidden) -->
+            <!-- Reaction Popup -->
+            <div id="reaction-popup" class="reaction-popup" style="display:none;">
+                <div class="reaction-emoji" onclick="addReaction('👍')">👍</div>
+                <div class="reaction-emoji" onclick="addReaction('❤️')">❤️</div>
+                <div class="reaction-emoji" onclick="addReaction('😂')">😂</div>
+                <div class="reaction-emoji" onclick="addReaction('😮')">😮</div>
+                <div class="reaction-emoji" onclick="addReaction('😢')">😢</div>
+                <div class="reaction-emoji" onclick="addReaction('🙏')">🙏</div>
+            </div>
+
+            <div id="toast" class="toast">Notice</div>
+
+            <div id="undo-toast" class="undo-toast" style="display:none;">
+                <span>Message deleted</span>
+                <span class="undo-btn" id="undo-btn">Undo</span>
+            </div>
+
+            <!-- Context Menu items dialog -->
             <div id="context-menu">
                 <div class="dropdown-item" onclick="handleReply()">Reply</div>
                 <div class="dropdown-item" onclick="handleCopy()">Copy</div>
+                <div class="dropdown-item" id="menu-pin-item" onclick="handlePinToggle()">Pin</div>
                 <div class="dropdown-item" onclick="handleDeletePrompt()">Delete</div>
             </div>
 
-            <!-- Reply Preview Bar -->
+            <!-- Reply Preview Bar above Input -->
             <div id="reply-preview">
                 <div class="reply-content">
                     <div class="reply-sender-name" id="reply-name"></div>
@@ -196,14 +312,18 @@
                     <button class="icon-btn" onclick="toggleEmojiPanel()"><svg>
                             <use href="#icon-emoji" />
                         </svg></button>
-                    <textarea id="msg-input" rows="1" placeholder="Type a message" oninput="handleInput()"></textarea>
+                    <textarea id="msg-input" rows="1" placeholder="Type your message"
+                        oninput="handleInput()"></textarea>
                     <div class="action-container">
                         <button class="icon-btn" onclick="showToast('Coming soon')"><svg>
                                 <use href="#icon-attach" />
                             </svg></button>
-                        <button class="icon-btn" id="camera-btn" onclick="showToast('Coming soon')"><svg>
+                        <button class="icon-btn" id="camera-btn"
+                            onclick="document.getElementById('image-upload').click()"><svg>
                                 <use href="#icon-camera" />
                             </svg></button>
+                        <input type="file" id="image-upload" accept="image/*" style="display:none;"
+                            onchange="handleImageUpload(event)">
                     </div>
                 </div>
                 <button class="send-btn" id="send-btn" onclick="sendMessage()">
@@ -212,17 +332,16 @@
                     </svg>
                 </button>
             </footer>
-
             <!-- Emoji Panel -->
-            <div id="emoji-panel">
+            <div id="emoji-panel" style="display:none;">
                 <div class="emoji-categories">
-                    <div class="emoji-cat active-cat" onclick="loadEmojis('smileys')">ðŸ˜Š</div>
-                    <div class="emoji-cat" onclick="loadEmojis('animals')">ðŸ¾</div>
-                    <div class="emoji-cat" onclick="loadEmojis('food')">ðŸ”</div>
-                    <div class="emoji-cat" onclick="loadEmojis('sports')">âš½</div>
-                    <div class="emoji-cat" onclick="loadEmojis('travel')">ðŸš—</div>
-                    <div class="emoji-cat" onclick="loadEmojis('objects')">ðŸ’¡</div>
-                    <div class="emoji-cat" onclick="loadEmojis('symbols')">â¤ï¸</div>
+                    <div class="emoji-cat active-cat" onclick="loadEmojis('smileys')">😀</div>
+                    <div class="emoji-cat" onclick="loadEmojis('animals')">🐶</div>
+                    <div class="emoji-cat" onclick="loadEmojis('food')">🍔</div>
+                    <div class="emoji-cat" onclick="loadEmojis('sports')">⚽</div>
+                    <div class="emoji-cat" onclick="loadEmojis('travel')">🚗</div>
+                    <div class="emoji-cat" onclick="loadEmojis('objects')">💡</div>
+                    <div class="emoji-cat" onclick="loadEmojis('symbols')">❤️</div>
                 </div>
                 <div class="emoji-grid" id="emoji-grid">
                     <!-- Emojis populated by JS -->
