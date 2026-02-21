@@ -30,7 +30,7 @@ const firebaseConfig = {
     messagingSenderId: "231912940312",
     appId: "1:231912940312:web:515b653c667339360b346d",
     measurementId: "G-QDVYDL5SBN",
-    databaseURL: "https://task-manager-4b27d-default-rtdb.firebaseio.com"
+    databaseURL: "https://task-manager-4b27d-default-rtdb.asia-southeast1.firebasedatabase.app"
 };
 
 // Initialize Firebase
