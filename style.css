@@ -1,4 +1,10 @@
-﻿:root {
+﻿/* Chat message fonts: English = Times New Roman, Bangla = Hind Siliguri Medium */
+.message-text {
+    font-family: 'Times New Roman', 'Hind Siliguri', serif;
+    font-weight: 500;
+}
+
+:root {
     /* Glassmorphism Variables */
     --primary: rgba(7, 94, 84, 0.85);
     --secondary: rgba(18, 140, 126, 0.9);
@@ -2375,4 +2381,107 @@ body.dark-theme .theme-name {
 .emoji-item:hover {
     transform: scale(1.15);
     background: rgba(0, 0, 0, 0.05);
+}
+
+/* --- Camera Circle Button (Instagram-style purple gradient) --- */
+.camera-circle-btn {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    border-radius: 50%;
+    border: none;
+    background: linear-gradient(135deg, #a855f7 0%, #c026d3 50%, #e040fb 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 2px 8px rgba(168, 85, 247, 0.35);
+    margin-left: 4px;
+}
+
+.camera-circle-btn:hover {
+    transform: scale(1.08);
+    box-shadow: 0 3px 12px rgba(168, 85, 247, 0.5);
+}
+
+.camera-circle-btn:active {
+    transform: scale(0.95);
+}
+
+.camera-circle-btn svg {
+    fill: white !important;
+}
+
+/* --- Image Viewer Lightbox --- */
+.image-viewer-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.92);
+    z-index: 200;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 200ms ease;
+}
+
+.image-viewer-overlay.active {
+    display: flex;
+}
+
+.image-viewer-header {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 16px;
+    z-index: 201;
+}
+
+.iv-btn {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255, 255, 255, 0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.iv-btn:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.viewer-img {
+    max-width: 92%;
+    max-height: 85vh;
+    object-fit: contain;
+    border-radius: 6px;
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
+.message-image {
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.message-image:hover {
+    opacity: 0.9;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
 }

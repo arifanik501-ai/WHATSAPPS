@@ -10,7 +10,9 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Hind+Siliguri:wght@400;500;600&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 
@@ -169,6 +171,8 @@
                 </div>
                 <div class="password-error" id="password-error">Incorrect password</div>
                 <button class="submit-btn" onclick="verifyPassword()">Submit</button>
+                <button class="submit-btn" onclick="document.getElementById('password-modal').style.display='none'"
+                    style="background: transparent; color: #d9534f; border: 1px solid #d9534f; margin-top: 8px;">Exit</button>
             </div>
         </div>
 
@@ -279,6 +283,23 @@
                 <div class="reaction-emoji" onclick="addReaction('🙏')">🙏</div>
             </div>
 
+            <!-- Image Viewer Lightbox -->
+            <div id="image-viewer" class="image-viewer-overlay" onclick="closeImageViewer(event)">
+                <div class="image-viewer-header">
+                    <button class="iv-btn" onclick="closeImageViewer()">
+                        <svg viewBox="0 0 24 24" width="24" height="24" fill="white">
+                            <use href="#icon-close" />
+                        </svg>
+                    </button>
+                    <button class="iv-btn" onclick="downloadViewerImage()">
+                        <svg viewBox="0 0 24 24" width="22" height="22" fill="white">
+                            <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
+                        </svg>
+                    </button>
+                </div>
+                <img id="viewer-img" class="viewer-img" src="" alt="Preview" />
+            </div>
+
             <div id="toast" class="toast">Notice</div>
 
             <div id="undo-toast" class="undo-toast" style="display:none;">
@@ -309,17 +330,14 @@
 
             <footer>
                 <div class="input-wrapper">
-                    <button class="icon-btn" onclick="toggleEmojiPanel()"><svg>
+                    <button class="icon-btn emoji-btn" onclick="toggleEmojiPanel()"><svg>
                             <use href="#icon-emoji" />
                         </svg></button>
-                    <textarea id="msg-input" rows="1" placeholder="Type your message"
-                        oninput="handleInput()"></textarea>
+                    <textarea id="msg-input" rows="1" placeholder="Message" oninput="handleInput()"></textarea>
                     <div class="action-container">
-                        <button class="icon-btn" onclick="showToast('Coming soon')"><svg>
-                                <use href="#icon-attach" />
-                            </svg></button>
-                        <button class="icon-btn" id="camera-btn"
-                            onclick="document.getElementById('image-upload').click()"><svg>
+                        <button class="camera-circle-btn" id="camera-btn"
+                            onclick="document.getElementById('image-upload').click()"><svg viewBox="0 0 24 24"
+                                width="20" height="20" fill="white">
                                 <use href="#icon-camera" />
                             </svg></button>
                         <input type="file" id="image-upload" accept="image/*" style="display:none;"

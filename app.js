@@ -123,11 +123,9 @@ function startAutoSync() {
 }
 
 function syncLocalToFirebase() {
-    // Only allow uploading if we have already received the latest server state
-    if (!clearingChat && isFirstSyncComplete) {
-        const localData = getLocalData(MSG_KEY, {});
-        messagesRef.set(localData).catch(err => console.error("Sync push failed", err));
-    }
+    if (clearingChat) return; // Don't sync during clear operation
+    const localData = getLocalData(MSG_KEY, {});
+    messagesRef.set(localData).catch(err => console.error("Sync push failed", err));
 }
 
 // --- UI Operations ---
@@ -685,7 +683,7 @@ function addMessageToDOM(msgId, msg) {
 
     let textContent = '';
     if (msg.image) {
-        textContent += `<img src="${msg.image}" class="message-image" />`;
+        textContent += `<img src="${msg.image}" class="message-image" onclick="openImageViewer(this.src)" />`;
     }
     if (msg.text) {
         let editedMark = msg.edited ? `<span class="message-edited"> (edited)</span>` : '';
@@ -727,6 +725,27 @@ function scrollToBottom(smooth = false) {
         body.scrollTop = body.scrollHeight;
     }
     document.getElementById('scroll-bottom').classList.remove('visible');
+}
+
+// --- Image Viewer ---
+function openImageViewer(src) {
+    const viewer = document.getElementById('image-viewer');
+    const img = document.getElementById('viewer-img');
+    img.src = src;
+    viewer.classList.add('active');
+}
+
+function closeImageViewer(e) {
+    if (e && e.target && (e.target.closest('.image-viewer-header') || e.target.id === 'viewer-img')) return;
+    document.getElementById('image-viewer').classList.remove('active');
+}
+
+function downloadViewerImage() {
+    const img = document.getElementById('viewer-img');
+    const link = document.createElement('a');
+    link.href = img.src;
+    link.download = 'whatsapp_image_' + Date.now() + '.png';
+    link.click();
 }
 
 function handleScroll() {
