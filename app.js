@@ -108,6 +108,41 @@ function initApp() {
     startAutoSync();
 }
 
+function handleUserSelection(event, userId) {
+    const btn = event.currentTarget;
+
+    // 1. Create Ripple
+    const ripple = document.createElement('span');
+    ripple.classList.add('ripple');
+    const rect = btn.getBoundingClientRect();
+    const size = Math.max(rect.width, rect.height);
+    ripple.style.width = ripple.style.height = `${size}px`;
+    const x = event.clientX - rect.left - size / 2;
+    const y = event.clientY - rect.top - size / 2;
+    ripple.style.left = `${x}px`;
+    ripple.style.top = `${y}px`;
+    btn.appendChild(ripple);
+
+    setTimeout(() => ripple.remove(), 600);
+
+    // 2. Show Popup after a tiny delay for the press animation
+    setTimeout(() => {
+        const userName = userId === 'user1' ? 'Anik' : 'Nafija';
+        document.getElementById('popup-user-name').innerText = userName;
+        const popupOverlay = document.getElementById('selection-popup-overlay');
+        popupOverlay.classList.add('active');
+
+        // 3. Close Popup and Proceed
+        setTimeout(() => {
+            popupOverlay.classList.add('closing');
+            setTimeout(() => {
+                popupOverlay.classList.remove('active', 'closing');
+                selectUser(userId);
+            }, 200);
+        }, 800);
+    }, 150);
+}
+
 function selectUser(userId) {
     currentUser = userId;
     partnerUser = userId === 'user1' ? 'user2' : 'user1';
@@ -115,7 +150,7 @@ function selectUser(userId) {
 
     document.getElementById('landing-page').style.display = 'none';
     document.getElementById('chat-page').style.display = 'flex';
-    document.getElementById('chat-partner-name').innerText = partnerUser === 'user1' ? 'User 1' : 'User 2';
+    document.getElementById('chat-partner-name').innerText = partnerUser === 'user1' ? 'Anik' : 'Nafija';
 
     updatePresence(true);
     loadAllMessages();
@@ -367,7 +402,17 @@ function sendMessage() {
     input.style.height = 'auto';
     handleInput();
     cancelReply();
-    scrollToBottom();
+
+    // Smooth auto-scroll interaction
+    setTimeout(() => {
+        scrollToBottom(true);
+        // Add Shimmer Effect
+        const newBubble = document.querySelector(`#msg-${msgId} .message-bubble`);
+        if (newBubble) {
+            newBubble.classList.add('shimmer');
+            setTimeout(() => newBubble.classList.remove('shimmer'), 300);
+        }
+    }, 50);
 
     updateTyping(false);
 }
@@ -398,7 +443,7 @@ function addMessageToDOM(msgId, msg) {
     let replyHTML = '';
     if (msg.replyTo && messagesList[msg.replyTo] && (!messagesList[msg.replyTo].deletedFor || !messagesList[msg.replyTo].deletedFor.includes(currentUser))) {
         const quoted = messagesList[msg.replyTo];
-        const senderName = quoted.sender === currentUser ? 'You' : (partnerUser === 'user1' ? 'User 1' : 'User 2');
+        const senderName = quoted.sender === currentUser ? 'You' : (partnerUser === 'user1' ? 'Anik' : 'Nafija');
         replyHTML = `
             <div class="quoted-msg" onclick="scrollToMsg('${msg.replyTo}')">
                 <div class="quoted-sender">${senderName}</div>
@@ -424,9 +469,13 @@ function addMessageToDOM(msgId, msg) {
     `;
 }
 
-function scrollToBottom() {
+function scrollToBottom(smooth = false) {
     const body = document.getElementById('chat-body');
-    body.scrollTop = body.scrollHeight;
+    if (smooth) {
+        body.scrollTo({ top: body.scrollHeight, behavior: 'smooth' });
+    } else {
+        body.scrollTop = body.scrollHeight;
+    }
     document.getElementById('scroll-bottom').classList.remove('visible');
 }
 
@@ -549,7 +598,7 @@ function handleReply() {
 
     replyToMsgId = selectedMsgId;
     const preview = document.getElementById('reply-preview');
-    document.getElementById('reply-name').innerText = msg.sender === currentUser ? 'You' : (partnerUser === 'user1' ? 'User 1' : 'User 2');
+    document.getElementById('reply-name').innerText = msg.sender === currentUser ? 'You' : (partnerUser === 'user1' ? 'Anik' : 'Nafija');
     document.getElementById('reply-text').innerText = msg.text;
     preview.classList.add('active');
     input.focus();
