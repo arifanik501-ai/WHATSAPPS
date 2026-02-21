@@ -49,83 +49,122 @@ let clearingChat = false;
 let isFirstSyncComplete = false;
 
 function startAutoSync() {
-    messagesRef.on('value', snap => {
-        if (clearingChat) return; // Skip sync during clear operation
-
+    // Initial fetch to handle cleared chats while offline, and to set isFirstSyncComplete
+    messagesRef.once('value').then(snap => {
+        isFirstSyncComplete = true;
         const remoteData = snap.val() || {};
         const localData = getLocalData(MSG_KEY, {});
-        const remoteKeys = Object.keys(remoteData);
-        const localKeys = Object.keys(localData);
 
-        // If Firebase is empty but local has messages, someone cleared the chat
-        // We must wipe local instantly
-        if (remoteKeys.length === 0 && localKeys.length > 0) {
+        // If remote is completely empty but local has messages, someone cleared the chat
+        if (Object.keys(remoteData).length === 0 && Object.keys(localData).length > 0) {
             setLocalData(MSG_KEY, {});
             messagesList = {};
             const chatBody = document.getElementById('chat-body');
             if (chatBody) {
-                chatBody.querySelectorAll('.message-row').forEach(r => r.remove());
+                chatBody.querySelectorAll('.message-row, .date-badge').forEach(r => r.remove());
             }
             loadAllMessages();
-            isFirstSyncComplete = true;
-            return;
         }
+    });
 
-        let merged = { ...localData };
+    // Listen for new messages
+    messagesRef.on('child_added', snap => {
+        if (clearingChat) return;
+        const key = snap.key;
+        const rMsg = snap.val();
+        const localData = getLocalData(MSG_KEY, {});
+
         let changed = false;
-
-        // Also remove local messages not in remote (deleted remotely)
-        for (const key in localData) {
-            if (!remoteData[key]) {
-                delete merged[key];
-                const row = document.getElementById(`msg-${key}`);
-                if (row) row.remove();
-                delete messagesList[key];
-                changed = true;
-            }
-        }
-
-        for (const key in remoteData) {
-            const rMsg = remoteData[key];
-            if (!localData[key]) {
-                merged[key] = rMsg;
-                changed = true;
-            } else {
-                let lMsg = localData[key];
-                if (rMsg.status !== lMsg.status) {
-                    lMsg.status = rMsg.status;
-                    changed = true;
-                }
-                if (rMsg.deleted && !lMsg.deleted) {
-                    lMsg.deleted = true;
-                    changed = true;
-                }
-                if (rMsg.deletedFor) {
-                    if (!lMsg.deletedFor) lMsg.deletedFor = [];
-                    for (let d of rMsg.deletedFor) {
-                        if (!lMsg.deletedFor.includes(d)) {
-                            lMsg.deletedFor.push(d);
-                            changed = true;
-                        }
-                    }
-                }
-                merged[key] = lMsg;
-            }
+        if (!localData[key]) {
+            localData[key] = rMsg;
+            changed = true;
+        } else {
+            changed = mergeMessage(localData[key], rMsg);
         }
 
         if (changed) {
-            setLocalData(MSG_KEY, merged);
+            setLocalData(MSG_KEY, localData);
             loadAllMessages();
         }
+    });
 
-        isFirstSyncComplete = true; // First real sync finished
+    // Listen for updated messages (read receipts, deletions, reactions)
+    messagesRef.on('child_changed', snap => {
+        if (clearingChat) return;
+        const key = snap.key;
+        const rMsg = snap.val();
+        const localData = getLocalData(MSG_KEY, {});
+
+        if (localData[key]) {
+            if (mergeMessage(localData[key], rMsg)) {
+                setLocalData(MSG_KEY, localData);
+                loadAllMessages();
+            }
+        }
+    });
+
+    // Listen for completely deleted messages
+    messagesRef.on('child_removed', snap => {
+        if (clearingChat) return;
+        const key = snap.key;
+        const localData = getLocalData(MSG_KEY, {});
+
+        if (localData[key]) {
+            delete localData[key];
+            setLocalData(MSG_KEY, localData);
+
+            const row = document.getElementById(`msg-${key}`);
+            if (row) row.remove();
+            delete messagesList[key];
+        }
     });
 }
 
+function mergeMessage(lMsg, rMsg) {
+    let changed = false;
+    if (rMsg.status !== lMsg.status) {
+        lMsg.status = rMsg.status;
+        changed = true;
+    }
+    if (rMsg.deleted && !lMsg.deleted) {
+        lMsg.deleted = true;
+        changed = true;
+    }
+    if (rMsg.edited && rMsg.text !== lMsg.text) {
+        lMsg.text = rMsg.text;
+        lMsg.edited = true;
+        changed = true;
+    }
+    if (rMsg.reactions) {
+        if (JSON.stringify(rMsg.reactions) !== JSON.stringify(lMsg.reactions)) {
+            lMsg.reactions = rMsg.reactions;
+            changed = true;
+        }
+    }
+    if (rMsg.deletedFor) {
+        if (!lMsg.deletedFor) lMsg.deletedFor = [];
+        const remoteDeletedFor = Array.isArray(rMsg.deletedFor) ? rMsg.deletedFor : Object.values(rMsg.deletedFor);
+        for (let d of remoteDeletedFor) {
+            if (d && !lMsg.deletedFor.includes(d)) {
+                lMsg.deletedFor.push(d);
+                changed = true;
+            }
+        }
+    }
+    return changed;
+}
+
 function syncLocalToFirebase() {
-    if (clearingChat) return; // Don't sync during clear operation
+    if (clearingChat) return;
     const localData = getLocalData(MSG_KEY, {});
-    messagesRef.set(localData).catch(err => console.error("Sync push failed", err));
+    if (Object.keys(localData).length === 0) return;
+    messagesRef.update(localData);
+}
+
+// Push a single message to Firebase instantly
+function pushSingleMessage(msgId, msgData) {
+    if (clearingChat) return;
+    messagesRef.child(msgId).set(msgData);
 }
 
 // --- UI Operations ---
@@ -368,7 +407,8 @@ function loadAllMessages() {
 
             if (msg.sender === partnerUser && msg.status !== 'read') {
                 msg.status = 'read';
-                markRead = true;
+                // Push read status instantly for this message only
+                messagesRef.child(msgId).update({ status: 'read' });
             }
         } else {
             // Updated message
@@ -382,7 +422,6 @@ function loadAllMessages() {
 
     if (markRead) {
         setLocalData(MSG_KEY, allMsgs);
-        syncLocalToFirebase(); // Sync read status back
     }
     if (needsScroll) {
         scrollToBottom();
@@ -586,8 +625,8 @@ function sendMessage() {
     cancelReply();
     updateTyping(false);
 
-    // Sync to Firebase async (non-blocking)
-    requestAnimationFrame(() => syncLocalToFirebase());
+    // Push only this message to Firebase (fast, no overwrite)
+    pushSingleMessage(msgId, msgData);
 }
 
 function handleImageUpload(e) {
