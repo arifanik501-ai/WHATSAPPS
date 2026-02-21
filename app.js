@@ -1182,12 +1182,16 @@ function clearAllMessages() {
     const rows = chatBody.querySelectorAll('.message-row');
     rows.forEach(r => r.remove());
 
-    // Sync empty state to Firebase
-    syncLocalToFirebase();
+    // Delete from Firebase completely
+    try {
+        messagesRef.set({});
+    } catch (e) {
+        console.error("Firebase clear failed", e);
+    }
 
     // Reload to show empty state
     loadAllMessages();
-    showToast("Chat history cleared");
+    showToast("Chat history cleared from all devices");
 }
 
 function promptWallpaper() {
