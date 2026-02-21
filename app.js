@@ -7,6 +7,13 @@ let selectedMsgId = null;
 let typingTimeout = null;
 let messagesList = {};
 
+// --- Profile Globals ---
+let usersProfile = {
+    user1: { name: 'Anik', dp: '' },
+    user2: { name: 'BEHULA', dp: '' }
+};
+let tempProfileDP = null;
+
 // --- Local Storage Helpers ---
 const MSG_KEY = 'wa_clone_messages';
 const PRESENCE_KEY = 'wa_clone_presence';
@@ -43,6 +50,7 @@ try {
 }
 const db = firebase.database();
 const messagesRef = db.ref('chat/messages');
+const usersRef = db.ref('chat/users');
 
 // --- Sync Operations ---
 let clearingChat = false;
@@ -192,6 +200,7 @@ function initApp() {
     // Periodically cleanup stale typing statuses
     setInterval(cleanupTyping, 3000);
 
+    startProfileSync();
     startAutoSync();
 }
 
@@ -226,12 +235,12 @@ function handleUserSelection(event, userId) {
         return;
     }
 
-    // 3. Normal Flow for Nafija
+    // 3. Normal Flow for BEHULA
     proceedWithUserSelection(userId);
 }
 
 function proceedWithUserSelection(userId) {
-    const userName = userId === 'user1' ? 'Anik' : 'Nafija';
+    const userName = userId === 'user1' ? 'Anik' : 'BEHULA';
     document.getElementById('popup-user-name').innerText = userName;
     const popupOverlay = document.getElementById('selection-popup-overlay');
     popupOverlay.classList.add('active');
@@ -294,7 +303,7 @@ function selectUser(userId) {
 
     document.getElementById('landing-page').style.display = 'none';
     document.getElementById('chat-page').style.display = 'flex';
-    document.getElementById('chat-partner-name').innerText = partnerUser === 'user1' ? 'Anik' : 'Nafija';
+    document.getElementById('chat-partner-name').innerText = partnerUser === 'user1' ? 'Anik' : 'BEHULA';
 
     updatePresence(true);
     loadAllMessages();
@@ -709,7 +718,7 @@ function addMessageToDOM(msgId, msg) {
     let replyHTML = '';
     if (msg.replyTo && messagesList[msg.replyTo] && (!messagesList[msg.replyTo].deletedFor || !messagesList[msg.replyTo].deletedFor.includes(currentUser))) {
         const quoted = messagesList[msg.replyTo];
-        const senderName = quoted.sender === currentUser ? 'You' : (partnerUser === 'user1' ? 'Anik' : 'Nafija');
+        const senderName = quoted.sender === currentUser ? 'You' : (partnerUser === 'user1' ? 'Anik' : 'BEHULA');
         let quotedPreview = escapeHTML(quoted.text);
         if (quoted.image && !quoted.text) quotedPreview = '📷 Photo';
         replyHTML = `
@@ -985,7 +994,7 @@ function handleReply() {
 
     replyToMsgId = selectedMsgId;
     const preview = document.getElementById('reply-preview');
-    document.getElementById('reply-name').innerText = msg.sender === currentUser ? 'You' : (partnerUser === 'user1' ? 'Anik' : 'Nafija');
+    document.getElementById('reply-name').innerText = msg.sender === currentUser ? 'You' : (partnerUser === 'user1' ? 'Anik' : 'BEHULA');
 
     let previewText = msg.text;
     if (msg.image && !msg.text) previewText = '📷 Photo';
@@ -1846,3 +1855,161 @@ function insertEmoji(emoji) {
     msgInput.focus();
     handleInput();
 }
+
+// --- Profile Settings ---
+function startProfileSync() {
+    usersRef.on('value', snap => {
+        const data = snap.val() || {};
+        if (data.user1) usersProfile.user1 = { ...usersProfile.user1, ...data.user1 };
+        if (data.user2) usersProfile.user2 = { ...usersProfile.user2, ...data.user2 };
+        updateUIWithProfiles();
+    });
+}
+
+function updateUIWithProfiles() {
+    // 1. Landing Page
+    const landName1 = document.getElementById('landing-name-user1');
+    const landDp1 = document.getElementById('landing-dp-user1');
+    const landSvg1 = document.getElementById('landing-svg-user1');
+    if (landName1) landName1.innerText = usersProfile.user1.name || 'Anik';
+    if (landDp1 && landSvg1) {
+        if (usersProfile.user1.dp) {
+            landDp1.src = usersProfile.user1.dp;
+            landDp1.style.display = 'block';
+            landSvg1.style.display = 'none';
+        } else {
+            landDp1.style.display = 'none';
+            landSvg1.style.display = 'block';
+        }
+    }
+
+    const landName2 = document.getElementById('landing-name-user2');
+    const landDp2 = document.getElementById('landing-dp-user2');
+    const landSvg2 = document.getElementById('landing-svg-user2');
+    if (landName2) landName2.innerText = usersProfile.user2.name || 'BEHULA';
+    if (landDp2 && landSvg2) {
+        if (usersProfile.user2.dp) {
+            landDp2.src = usersProfile.user2.dp;
+            landDp2.style.display = 'block';
+            landSvg2.style.display = 'none';
+        } else {
+            landDp2.style.display = 'none';
+            landSvg2.style.display = 'block';
+        }
+    }
+
+    // 2. Chat Header
+    if (currentUser && partnerUser) {
+        const cName = document.getElementById('chat-partner-name');
+        const cDp = document.getElementById('chat-partner-dp');
+        const cSvg = document.getElementById('chat-partner-svg');
+        if (cName) cName.innerText = usersProfile[partnerUser].name;
+        if (cDp && cSvg) {
+            if (usersProfile[partnerUser].dp) {
+                cDp.src = usersProfile[partnerUser].dp;
+                cDp.style.display = 'block';
+                cSvg.style.display = 'none';
+            } else {
+                cDp.style.display = 'none';
+                cSvg.style.display = 'block';
+            }
+        }
+    }
+}
+
+function openProfileModal() {
+    tempProfileDP = usersProfile[currentUser].dp || null;
+    const nameInput = document.getElementById('profile-name-input');
+    const dpPreview = document.getElementById('profile-dp-preview');
+    const dpPlaceholder = document.getElementById('profile-dp-placeholder');
+
+    nameInput.value = usersProfile[currentUser].name;
+
+    if (tempProfileDP) {
+        dpPreview.src = tempProfileDP;
+        dpPreview.style.display = 'block';
+        dpPlaceholder.style.display = 'none';
+    } else {
+        dpPreview.style.display = 'none';
+        dpPlaceholder.style.display = 'flex';
+    }
+
+    // Hide main menu dropdown
+    const menu = document.getElementById('main-menu');
+    if (menu) menu.style.display = 'none';
+
+    document.getElementById('profile-modal').style.display = 'flex';
+}
+
+function closeProfileModal() {
+    document.getElementById('profile-modal').style.display = 'none';
+    tempProfileDP = null;
+}
+
+function handleDPSelect(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        const img = new Image();
+        img.onload = function () {
+            const canvas = document.createElement('canvas');
+            const maxDim = 150; // Compress avatar significantly
+            let width = img.width;
+            let height = img.height;
+
+            if (width > height) {
+                if (width > maxDim) {
+                    height = Math.round(height * (maxDim / width));
+                    width = maxDim;
+                }
+            } else {
+                if (height > maxDim) {
+                    width = Math.round(width * (maxDim / height));
+                    height = maxDim;
+                }
+            }
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+
+            tempProfileDP = canvas.toDataURL('image/jpeg', 0.8);
+
+            const dpPreview = document.getElementById('profile-dp-preview');
+            const dpPlaceholder = document.getElementById('profile-dp-placeholder');
+            dpPreview.src = tempProfileDP;
+            dpPreview.style.display = 'block';
+            dpPlaceholder.style.display = 'none';
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+function saveProfile() {
+    const nameInput = document.getElementById('profile-name-input').value.trim();
+    if (!nameInput) {
+        showToast('Name cannot be empty');
+        return;
+    }
+
+    // Optimistic Update
+    usersProfile[currentUser].name = nameInput;
+    if (tempProfileDP) usersProfile[currentUser].dp = tempProfileDP;
+    updateUIWithProfiles();
+
+    // Push to Firebase
+    usersRef.child(currentUser).update({
+        name: nameInput,
+        dp: usersProfile[currentUser].dp
+    }).then(() => {
+        showToast('Profile updated');
+        closeProfileModal();
+    }).catch(err => {
+        console.error('Failed to update profile', err);
+        showToast('Failed to save profile');
+    });
+}
+

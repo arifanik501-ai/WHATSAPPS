@@ -126,18 +126,22 @@
                 <div class="landing-title">Select Participants</div>
                 <button class="premium-btn user1-btn" onclick="handleUserSelection(event, 'user1')">
                     <div class="btn-content">
-                        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                        <img id="landing-dp-user1" src=""
+                            style="display:none; width:22px; height:22px; border-radius:50%; object-fit:cover;">
+                        <svg id="landing-svg-user1" viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
                             <use href="#icon-person" />
                         </svg>
-                        <span>Anik (User 1)</span>
+                        <span id="landing-name-user1">Anik</span>
                     </div>
                 </button>
                 <button class="premium-btn user2-btn" onclick="handleUserSelection(event, 'user2')">
                     <div class="btn-content">
-                        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                        <img id="landing-dp-user2" src=""
+                            style="display:none; width:22px; height:22px; border-radius:50%; object-fit:cover;">
+                        <svg id="landing-svg-user2" viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
                             <use href="#icon-person" />
                         </svg>
-                        <span>Nafija (User 2)</span>
+                        <span id="landing-name-user2">BEHULA</span>
                     </div>
                 </button>
                 <p class="helper-text">Choose one user for this device and another user on a separate device to start a
@@ -184,9 +188,13 @@
                     <div class="back-btn"><svg>
                             <use href="#icon-back" />
                         </svg></div>
-                    <div class="avatar"><svg>
+                    <div class="avatar">
+                        <img id="chat-partner-dp" src=""
+                            style="display:none; width:40px; height:40px; border-radius:50%; object-fit:cover;">
+                        <svg id="chat-partner-svg">
                             <use href="#icon-person" />
-                        </svg></div>
+                        </svg>
+                    </div>
                     <div class="user-info">
                         <span class="user-name" id="chat-partner-name">...</span>
                         <div class="status-container">
@@ -215,6 +223,7 @@
                 <div class="dropdown" id="main-menu">
                     <div class="dropdown-item" onclick="toggleTheme()">Dark Mode / Light Mode</div>
                     <div class="dropdown-item" onclick="toggleSearchInput()">Search</div>
+                    <div class="dropdown-item" onclick="openProfileModal()">Profile Settings</div>
                     <div class="dropdown-item" onclick="promptDeleteForMe()">Delete Messages for Me</div>
                     <div class="dropdown-item" onclick="promptWallpaper()">Wallpaper</div>
                     <div class="dropdown-item" onclick="showLanding()">Change User</div>
@@ -377,6 +386,37 @@
                 <div id="dialog-body">Content</div>
                 <div class="dialog-actions" id="dialog-actions">
                     <button class="dialog-btn" onclick="closeDialog()">Cancel</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Profile Settings Modal -->
+        <div id="profile-modal" class="popup-overlay" style="display: none; z-index: 2000;">
+            <div class="dialog">
+                <h3 class="dialog-title">Profile Settings</h3>
+                <div style="display:flex; flex-direction:column; align-items:center; gap:15px; margin-bottom: 20px;">
+                    <label for="dp-upload"
+                        style="cursor:pointer; display:flex; flex-direction:column; align-items:center;">
+                        <img id="profile-dp-preview" src=""
+                            style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; background: #eee; border: 2px solid #00A884; display: none;" />
+                        <div id="profile-dp-placeholder"
+                            style="width: 100px; height: 100px; border-radius: 50%; background: #ece5dd; display: flex; align-items:center; justify-content:center; color:#8696a0;">
+                            <svg viewBox="0 0 24 24" width="40" height="40" fill="currentColor">
+                                <use href="#icon-camera" />
+                            </svg>
+                        </div>
+                        <span style="font-size:14px; color:#00A884; margin-top:8px;">Change Photo</span>
+                    </label>
+                    <input type="file" id="dp-upload" accept="image/*" style="display:none;"
+                        onchange="handleDPSelect(event)">
+
+                    <input type="text" id="profile-name-input" placeholder="Your Name"
+                        style="width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; outline: none; font-size: 16px; background: transparent; color: inherit;">
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 15px;">
+                    <button class="dialog-btn" onclick="closeProfileModal()">Cancel</button>
+                    <button class="dialog-btn" style="color: #00A884; font-weight: bold;"
+                        onclick="saveProfile()">Save</button>
                 </div>
             </div>
         </div>
