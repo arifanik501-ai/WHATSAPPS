@@ -45,13 +45,45 @@ const db = firebase.database();
 const messagesRef = db.ref('chat/messages');
 
 // --- Sync Operations ---
+let clearingChat = false;
+let isFirstSyncComplete = false;
+
 function startAutoSync() {
     messagesRef.on('value', snap => {
+        if (clearingChat) return; // Skip sync during clear operation
+
         const remoteData = snap.val() || {};
         const localData = getLocalData(MSG_KEY, {});
+        const remoteKeys = Object.keys(remoteData);
+        const localKeys = Object.keys(localData);
+
+        // If Firebase is empty but local has messages, someone cleared the chat
+        // We must wipe local instantly
+        if (remoteKeys.length === 0 && localKeys.length > 0) {
+            setLocalData(MSG_KEY, {});
+            messagesList = {};
+            const chatBody = document.getElementById('chat-body');
+            if (chatBody) {
+                chatBody.querySelectorAll('.message-row').forEach(r => r.remove());
+            }
+            loadAllMessages();
+            isFirstSyncComplete = true;
+            return;
+        }
 
         let merged = { ...localData };
         let changed = false;
+
+        // Also remove local messages not in remote (deleted remotely)
+        for (const key in localData) {
+            if (!remoteData[key]) {
+                delete merged[key];
+                const row = document.getElementById(`msg-${key}`);
+                if (row) row.remove();
+                delete messagesList[key];
+                changed = true;
+            }
+        }
 
         for (const key in remoteData) {
             const rMsg = remoteData[key];
@@ -85,12 +117,17 @@ function startAutoSync() {
             setLocalData(MSG_KEY, merged);
             loadAllMessages();
         }
+
+        isFirstSyncComplete = true; // First real sync finished
     });
 }
 
 function syncLocalToFirebase() {
-    const localData = getLocalData(MSG_KEY, {});
-    messagesRef.update(localData).catch(err => console.error("Sync push failed", err));
+    // Only allow uploading if we have already received the latest server state
+    if (!clearingChat && isFirstSyncComplete) {
+        const localData = getLocalData(MSG_KEY, {});
+        messagesRef.set(localData).catch(err => console.error("Sync push failed", err));
+    }
 }
 
 // --- UI Operations ---
@@ -1172,26 +1209,67 @@ function promptClearChat() {
     }
 }
 
-function clearAllMessages() {
-    // Remove all messages from local storage
-    setLocalData(MSG_KEY, {});
+function promptDeleteForMe() {
+    document.getElementById('main-menu').classList.remove('active');
+
+    if (confirm("Delete all messages for you only? The other user will still see them.")) {
+        deleteAllForMe();
+    }
+}
+
+function deleteAllForMe() {
+    const allMsgs = getLocalData(MSG_KEY, {});
+
+    for (let id in allMsgs) {
+        if (!allMsgs[id].deletedFor) allMsgs[id].deletedFor = [];
+        if (!allMsgs[id].deletedFor.includes(currentUser)) {
+            allMsgs[id].deletedFor.push(currentUser);
+        }
+    }
+
+    setLocalData(MSG_KEY, allMsgs);
     messagesList = {};
 
     // Clear DOM
     const chatBody = document.getElementById('chat-body');
-    const rows = chatBody.querySelectorAll('.message-row');
-    rows.forEach(r => r.remove());
+    if (chatBody) {
+        chatBody.querySelectorAll('.message-row, .date-badge').forEach(r => r.remove());
+    }
+
+    // Sync to Firebase
+    syncLocalToFirebase();
+
+    loadAllMessages();
+    showToast("Messages deleted for you");
+}
+
+function clearAllMessages() {
+    clearingChat = true;
+
+    // Remove all messages from local storage
+    setLocalData(MSG_KEY, {});
+    messagesList = {};
+
+    // Clear DOM completely
+    const chatBody = document.getElementById('chat-body');
+    if (chatBody) {
+        chatBody.querySelectorAll('.message-row, .date-badge').forEach(r => r.remove());
+    }
 
     // Delete from Firebase completely
-    try {
-        messagesRef.set({});
-    } catch (e) {
-        console.error("Firebase clear failed", e);
-    }
+    messagesRef.remove()
+        .then(() => {
+            clearingChat = false;
+            showToast("Chat cleared from all devices");
+        })
+        .catch(err => {
+            clearingChat = false;
+            console.error("Firebase clear failed", err);
+            showToast("Chat cleared locally");
+        });
 
     // Reload to show empty state
     loadAllMessages();
-    showToast("Chat history cleared from all devices");
 }
 
 function promptWallpaper() {
