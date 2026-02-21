@@ -6,7 +6,6 @@ let replyToMsgId = null;
 let selectedMsgId = null;
 let typingTimeout = null;
 let messagesList = {};
-let autoSyncEnabled = localStorage.getItem('autoSyncEnabled') === 'true';
 
 // --- Local Storage Helpers ---
 const MSG_KEY = 'wa_clone_messages';
@@ -24,14 +23,14 @@ function setLocalData(key, val) {
 
 // --- Firebase Setup ---
 const firebaseConfig = {
-    apiKey: "AIzaSyBcjbR7Qu7M-RnHUtLJ9zeehILqQHYLw4E",
-    authDomain: "whatsapp-c10ef.firebaseapp.com",
-    projectId: "whatsapp-c10ef",
-    storageBucket: "whatsapp-c10ef.firebasestorage.app",
-    messagingSenderId: "675053106773",
-    appId: "1:675053106773:web:b7078468691a07ecfec6dc",
-    measurementId: "G-89Z8WBJ3R0",
-    databaseURL: "https://whatsapp-c10ef-default-rtdb.firebaseio.com"
+    apiKey: "AIzaSyB0m0RnL66ad2YmPkEb7mGocN7zfmw8vtA",
+    authDomain: "task-manager-4b27d.firebaseapp.com",
+    projectId: "task-manager-4b27d",
+    storageBucket: "task-manager-4b27d.firebasestorage.app",
+    messagingSenderId: "231912940312",
+    appId: "1:231912940312:web:515b653c667339360b346d",
+    measurementId: "G-QDVYDL5SBN",
+    databaseURL: "https://task-manager-4b27d-default-rtdb.firebaseio.com"
 };
 
 // Initialize Firebase
@@ -44,35 +43,8 @@ const db = firebase.database();
 const messagesRef = db.ref('chat/messages');
 
 // --- Sync Operations ---
-function toggleAutoSync() {
-    autoSyncEnabled = !autoSyncEnabled;
-    localStorage.setItem('autoSyncEnabled', autoSyncEnabled);
-    if (autoSyncEnabled) {
-        enableAutoSyncUI();
-        startAutoSync();
-        syncLocalToFirebase();
-    } else {
-        disableAutoSyncUI();
-        stopAutoSync();
-    }
-    document.getElementById('main-menu').classList.remove('active');
-}
-
-function enableAutoSyncUI() {
-    document.getElementById('auto-sync-btn').innerText = 'Auto Sync: ON';
-    const syncIcon = document.getElementById('sync-icon');
-    syncIcon.style.display = 'flex';
-    syncIcon.querySelector('svg').style.fill = '#25D366';
-}
-
-function disableAutoSyncUI() {
-    document.getElementById('auto-sync-btn').innerText = 'Auto Sync: OFF';
-    document.getElementById('sync-icon').style.display = 'none';
-}
-
 function startAutoSync() {
     messagesRef.on('value', snap => {
-        if (!autoSyncEnabled) return;
         const remoteData = snap.val() || {};
         const localData = getLocalData(MSG_KEY, {});
 
@@ -114,51 +86,10 @@ function startAutoSync() {
     });
 }
 
-function stopAutoSync() {
-    messagesRef.off('value');
-}
-
 function syncLocalToFirebase() {
-    if (!autoSyncEnabled) return;
     const localData = getLocalData(MSG_KEY, {});
     messagesRef.update(localData).catch(err => console.error("Sync push failed", err));
 }
-
-function manualSync() {
-    document.getElementById('main-menu').classList.remove('active');
-    showToast("Syncing manually...");
-
-    // Animate sync icon color temporarily
-    const syncIcon = document.getElementById('sync-icon');
-    syncIcon.style.display = 'flex';
-    syncIcon.querySelector('svg').style.fill = '#34B7F1';
-
-    const localData = getLocalData(MSG_KEY, {});
-
-    messagesRef.update(localData).then(() => {
-        return messagesRef.once('value');
-    }).then(snap => {
-        const remoteData = snap.val() || {};
-        let merged = { ...localData };
-        for (const key in remoteData) {
-            if (!merged[key]) merged[key] = remoteData[key];
-        }
-        setLocalData(MSG_KEY, merged);
-        loadAllMessages();
-        showToast("Sync Complete!");
-
-        if (!autoSyncEnabled) {
-            setTimeout(() => { syncIcon.style.display = 'none'; }, 2000);
-        } else {
-            syncIcon.querySelector('svg').style.fill = '#25D366';
-        }
-    }).catch(err => {
-        showToast("Sync Failed!");
-        console.error(err);
-        if (!autoSyncEnabled) syncIcon.style.display = 'none';
-    });
-}
-
 
 // --- UI Operations ---
 function initApp() {
@@ -174,12 +105,7 @@ function initApp() {
     // Periodically cleanup stale typing statuses
     setInterval(cleanupTyping, 3000);
 
-    if (autoSyncEnabled) {
-        enableAutoSyncUI();
-        startAutoSync();
-    } else {
-        disableAutoSyncUI();
-    }
+    startAutoSync();
 }
 
 function selectUser(userId) {
@@ -530,7 +456,17 @@ const emojis = {
 
 function loadEmojis(category) {
     document.querySelectorAll('.emoji-cat').forEach(c => c.classList.remove('active-cat'));
-    event.target.classList.add('active-cat');
+
+    // Safely apply active class to the clicked tab, or default to first tab on load
+    if (typeof event !== 'undefined' && event && event.type === 'click') {
+        let el = event.currentTarget || event.target;
+        if (el.closest) el = el.closest('.emoji-cat') || el;
+        if (el && el.classList) el.classList.add('active-cat');
+    } else if (category === 'smileys') {
+        const cats = document.querySelectorAll('.emoji-cat');
+        if (cats.length > 0) cats[0].classList.add('active-cat');
+    }
+
     const grid = document.getElementById('emoji-grid');
     grid.innerHTML = '';
     emojis[category].forEach(e => {
