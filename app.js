@@ -6,6 +6,7 @@ let replyToMsgId = null;
 let selectedMsgId = null;
 let typingTimeout = null;
 let messagesList = {};
+let autoSyncEnabled = localStorage.getItem('autoSyncEnabled') === 'true';
 
 // --- Local Storage Helpers ---
 const MSG_KEY = 'wa_clone_messages';
@@ -21,6 +22,144 @@ function setLocalData(key, val) {
     localStorage.setItem(key, JSON.stringify(val));
 }
 
+// --- Firebase Setup ---
+const firebaseConfig = {
+    apiKey: "AIzaSyBcjbR7Qu7M-RnHUtLJ9zeehILqQHYLw4E",
+    authDomain: "whatsapp-c10ef.firebaseapp.com",
+    projectId: "whatsapp-c10ef",
+    storageBucket: "whatsapp-c10ef.firebasestorage.app",
+    messagingSenderId: "675053106773",
+    appId: "1:675053106773:web:b7078468691a07ecfec6dc",
+    measurementId: "G-89Z8WBJ3R0",
+    databaseURL: "https://whatsapp-c10ef-default-rtdb.firebaseio.com"
+};
+
+// Initialize Firebase
+try {
+    firebase.initializeApp(firebaseConfig);
+} catch (e) {
+    console.error("Firebase init error", e);
+}
+const db = firebase.database();
+const messagesRef = db.ref('chat/messages');
+
+// --- Sync Operations ---
+function toggleAutoSync() {
+    autoSyncEnabled = !autoSyncEnabled;
+    localStorage.setItem('autoSyncEnabled', autoSyncEnabled);
+    if (autoSyncEnabled) {
+        enableAutoSyncUI();
+        startAutoSync();
+        syncLocalToFirebase();
+    } else {
+        disableAutoSyncUI();
+        stopAutoSync();
+    }
+    document.getElementById('main-menu').classList.remove('active');
+}
+
+function enableAutoSyncUI() {
+    document.getElementById('auto-sync-btn').innerText = 'Auto Sync: ON';
+    const syncIcon = document.getElementById('sync-icon');
+    syncIcon.style.display = 'flex';
+    syncIcon.querySelector('svg').style.fill = '#25D366';
+}
+
+function disableAutoSyncUI() {
+    document.getElementById('auto-sync-btn').innerText = 'Auto Sync: OFF';
+    document.getElementById('sync-icon').style.display = 'none';
+}
+
+function startAutoSync() {
+    messagesRef.on('value', snap => {
+        if (!autoSyncEnabled) return;
+        const remoteData = snap.val() || {};
+        const localData = getLocalData(MSG_KEY, {});
+
+        let merged = { ...localData };
+        let changed = false;
+
+        for (const key in remoteData) {
+            const rMsg = remoteData[key];
+            if (!localData[key]) {
+                merged[key] = rMsg;
+                changed = true;
+            } else {
+                let lMsg = localData[key];
+                if (rMsg.status !== lMsg.status) {
+                    lMsg.status = rMsg.status;
+                    changed = true;
+                }
+                if (rMsg.deleted && !lMsg.deleted) {
+                    lMsg.deleted = true;
+                    changed = true;
+                }
+                if (rMsg.deletedFor) {
+                    if (!lMsg.deletedFor) lMsg.deletedFor = [];
+                    for (let d of rMsg.deletedFor) {
+                        if (!lMsg.deletedFor.includes(d)) {
+                            lMsg.deletedFor.push(d);
+                            changed = true;
+                        }
+                    }
+                }
+                merged[key] = lMsg;
+            }
+        }
+
+        if (changed) {
+            setLocalData(MSG_KEY, merged);
+            loadAllMessages();
+        }
+    });
+}
+
+function stopAutoSync() {
+    messagesRef.off('value');
+}
+
+function syncLocalToFirebase() {
+    if (!autoSyncEnabled) return;
+    const localData = getLocalData(MSG_KEY, {});
+    messagesRef.update(localData).catch(err => console.error("Sync push failed", err));
+}
+
+function manualSync() {
+    document.getElementById('main-menu').classList.remove('active');
+    showToast("Syncing manually...");
+
+    // Animate sync icon color temporarily
+    const syncIcon = document.getElementById('sync-icon');
+    syncIcon.style.display = 'flex';
+    syncIcon.querySelector('svg').style.fill = '#34B7F1';
+
+    const localData = getLocalData(MSG_KEY, {});
+
+    messagesRef.update(localData).then(() => {
+        return messagesRef.once('value');
+    }).then(snap => {
+        const remoteData = snap.val() || {};
+        let merged = { ...localData };
+        for (const key in remoteData) {
+            if (!merged[key]) merged[key] = remoteData[key];
+        }
+        setLocalData(MSG_KEY, merged);
+        loadAllMessages();
+        showToast("Sync Complete!");
+
+        if (!autoSyncEnabled) {
+            setTimeout(() => { syncIcon.style.display = 'none'; }, 2000);
+        } else {
+            syncIcon.querySelector('svg').style.fill = '#25D366';
+        }
+    }).catch(err => {
+        showToast("Sync Failed!");
+        console.error(err);
+        if (!autoSyncEnabled) syncIcon.style.display = 'none';
+    });
+}
+
+
 // --- UI Operations ---
 function initApp() {
     const savedUser = localStorage.getItem('chatUser');
@@ -34,6 +173,13 @@ function initApp() {
 
     // Periodically cleanup stale typing statuses
     setInterval(cleanupTyping, 3000);
+
+    if (autoSyncEnabled) {
+        enableAutoSyncUI();
+        startAutoSync();
+    } else {
+        disableAutoSyncUI();
+    }
 }
 
 function selectUser(userId) {
@@ -159,6 +305,7 @@ function loadAllMessages() {
 
     if (markRead) {
         setLocalData(MSG_KEY, allMsgs);
+        syncLocalToFirebase(); // Sync read status back
     }
     if (needsScroll) {
         setTimeout(scrollToBottom, 50);
@@ -287,6 +434,7 @@ function sendMessage() {
     allMsgs[msgId] = msgData;
     setLocalData(MSG_KEY, allMsgs);
 
+    syncLocalToFirebase();
     loadAllMessages();
 
     input.value = '';
@@ -322,7 +470,7 @@ function addMessageToDOM(msgId, msg) {
     }
 
     let replyHTML = '';
-    if (msg.replyTo && messagesList[msg.replyTo] && !messagesList[msg.replyTo].deletedFor.includes(currentUser)) {
+    if (msg.replyTo && messagesList[msg.replyTo] && (!messagesList[msg.replyTo].deletedFor || !messagesList[msg.replyTo].deletedFor.includes(currentUser))) {
         const quoted = messagesList[msg.replyTo];
         const senderName = quoted.sender === currentUser ? 'You' : (partnerUser === 'user1' ? 'User 1' : 'User 2');
         replyHTML = `
@@ -415,6 +563,7 @@ function markMessagesAsRead() {
     }
     if (changed) {
         setLocalData(MSG_KEY, allMsgs);
+        syncLocalToFirebase(); // Sync read status back
         loadAllMessages();
     }
 }
@@ -510,6 +659,7 @@ function deleteMessage(type) {
             allMsgs[selectedMsgId].deleted = true;
             allMsgs[selectedMsgId].text = '';
             setLocalData(MSG_KEY, allMsgs);
+            syncLocalToFirebase();
             loadAllMessages();
         }
     } else if (type === 'forMe') {
@@ -517,6 +667,7 @@ function deleteMessage(type) {
             if (!allMsgs[selectedMsgId].deletedFor) allMsgs[selectedMsgId].deletedFor = [];
             allMsgs[selectedMsgId].deletedFor.push(currentUser);
             setLocalData(MSG_KEY, allMsgs);
+            syncLocalToFirebase();
             loadAllMessages();
         }
     }
@@ -588,6 +739,7 @@ function clearAllMessages() {
         }
     }
     setLocalData(MSG_KEY, allMsgs);
+    syncLocalToFirebase();
     loadAllMessages();
     showToast("Chat cleared");
     closeDialog();
